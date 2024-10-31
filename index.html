@@ -1,0 +1,183 @@
+import React, { useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Car, Home, Battery } from 'lucide-react';
+
+const BatteryCalculator = () => {
+  const TESLA_CAPACITY = 60;
+  const HOME_CAPACITY = 15;
+  
+  const [teslaCurrent, setTeslaCurrent] = useState(50);
+  const [homeCurrent, setHomeCurrent] = useState(50);
+  const [minHomeCharge, setMinHomeCharge] = useState(2);
+
+  const validatePercentage = (value) => {
+    const num = parseFloat(value);
+    if (isNaN(num)) return 0;
+    return Math.min(100, Math.max(0, num));
+  };
+
+  const handleTeslaTextInput = (e) => {
+    const value = validatePercentage(e.target.value);
+    setTeslaCurrent(value);
+  };
+
+  const handleHomeTextInput = (e) => {
+    const value = validatePercentage(e.target.value);
+    setHomeCurrent(value);
+  };
+
+  const handleMinChargeInput = (e) => {
+    const value = validatePercentage(e.target.value);
+    setMinHomeCharge(value);
+  };
+
+  const calculateChargingLimit = () => {
+    const homeCurrentKwh = (homeCurrent / 100) * HOME_CAPACITY;
+    const teslaCurrentKwh = (teslaCurrent / 100) * TESLA_CAPACITY;
+    const minHomeKwh = (minHomeCharge / 100) * HOME_CAPACITY;
+    const availableEnergy = homeCurrentKwh - minHomeKwh;
+    const possibleChargeKwh = teslaCurrentKwh + availableEnergy;
+    const maxChargePercentage = (possibleChargeKwh / TESLA_CAPACITY) * 100;
+    return Math.min(100, Math.max(teslaCurrent, maxChargePercentage)).toFixed(1);
+  };
+
+  const teslaAvailableEnergy = ((100 - teslaCurrent) / 100 * TESLA_CAPACITY).toFixed(1);
+
+  return (
+    <Card className="w-full max-w-md mx-auto p-4">
+      <CardHeader>
+        <CardTitle className="text-xl text-center mb-4 flex items-center justify-center space-x-2">
+          <Battery className="w-6 h-6" />
+          <span>Calcolatore Limite Ricarica</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-8">
+        {/* Sezione Tesla */}
+        <div className="space-y-4 p-4 bg-red-50 rounded-lg">
+          <div className="flex items-center space-x-2 mb-2">
+            <Car className="w-5 h-5 text-red-600" />
+            <h3 className="font-semibold">Tesla ({TESLA_CAPACITY} kWh)</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="flex-grow">Imposta Carica Attuale</Label>
+              <div className="flex items-center">
+                <Input
+                  type="number"
+                  value={teslaCurrent}
+                  onChange={handleTeslaTextInput}
+                  min={0}
+                  max={100}
+                  className="w-16"
+                />
+                <span className="ml-1">%</span>
+              </div>
+            </div>
+            <style jsx global>{`
+              .tesla-slider .relative {
+                background-color: rgb(254 202 202);
+              }
+              .tesla-slider [role="slider"] {
+                background-color: rgb(239 68 68);
+              }
+              .tesla-slider [role="slider"]:focus-visible {
+                outline-color: rgb(239 68 68);
+              }
+              .tesla-slider .range {
+                background-color: rgb(239 68 68) !important;
+              }
+              .home-slider .relative {
+                background-color: rgb(219 234 254);
+              }
+              .home-slider [role="slider"] {
+                background-color: rgb(37 99 235);
+              }
+              .home-slider [role="slider"]:focus-visible {
+                outline-color: rgb(37 99 235);
+              }
+              .home-slider .range {
+                background-color: rgb(37 99 235) !important;
+              }
+            `}</style>
+            <Slider
+              value={[teslaCurrent]}
+              onValueChange={(value) => setTeslaCurrent(value[0])}
+              min={0}
+              max={100}
+              step={1}
+              className="w-full tesla-slider"
+            />
+            <div className="text-sm text-gray-600">
+              Energia disponibile: {teslaAvailableEnergy} kWh
+            </div>
+          </div>
+        </div>
+
+        {/* Sezione Casa */}
+        <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
+          <div className="flex items-center space-x-2 mb-2">
+            <Home className="w-5 h-5 text-blue-600" />
+            <h3 className="font-semibold">Batteria Casa ({HOME_CAPACITY} kWh)</h3>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="flex-grow">Imposta Carica Attuale</Label>
+              <div className="flex items-center">
+                <Input
+                  type="number"
+                  value={homeCurrent}
+                  onChange={handleHomeTextInput}
+                  min={0}
+                  max={100}
+                  className="w-16"
+                />
+                <span className="ml-1">%</span>
+              </div>
+            </div>
+            <Slider
+              value={[homeCurrent]}
+              onValueChange={(value) => setHomeCurrent(value[0])}
+              min={0}
+              max={100}
+              step={1}
+              className="w-full home-slider"
+            />
+            <div className="text-sm text-gray-600">
+              Energia disponibile: {((homeCurrent - minHomeCharge) / 100 * HOME_CAPACITY).toFixed(1)} kWh
+            </div>
+          </div>
+
+          <div className="space-y-2 mt-4">
+            <div className="flex items-center justify-between">
+              <Label className="flex-grow">Livello Minimo Desiderato</Label>
+              <div className="flex items-center">
+                <Input
+                  type="number"
+                  value={minHomeCharge}
+                  onChange={handleMinChargeInput}
+                  min={0}
+                  max={100}
+                  className="w-16"
+                />
+                <span className="ml-1">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sezione Risultato */}
+        <div className="p-4 bg-gray-100 rounded-lg">
+          <p className="text-lg font-semibold text-gray-700">
+            Imposta Limite Ricarica Tesla: <span className="font-bold text-xl">{calculateChargingLimit()}%</span>
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default BatteryCalculator;
