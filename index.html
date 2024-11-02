@@ -1,182 +1,235 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Car, Home, Battery } from 'lucide-react';
-
-const BatteryCalculator = () => {
-  const TESLA_CAPACITY = 60;
-  const HOME_CAPACITY = 15;
-  
-  const [teslaCurrent, setTeslaCurrent] = useState(50);
-  const [homeCurrent, setHomeCurrent] = useState(50);
-  const [minHomeCharge, setMinHomeCharge] = useState(2);
-
-  const validatePercentage = (value) => {
-    const num = parseFloat(value);
-    if (isNaN(num)) return 0;
-    return Math.min(100, Math.max(0, num));
-  };
-
-  const handleTeslaTextInput = (e) => {
-    const value = validatePercentage(e.target.value);
-    setTeslaCurrent(value);
-  };
-
-  const handleHomeTextInput = (e) => {
-    const value = validatePercentage(e.target.value);
-    setHomeCurrent(value);
-  };
-
-  const handleMinChargeInput = (e) => {
-    const value = validatePercentage(e.target.value);
-    setMinHomeCharge(value);
-  };
-
-  const calculateChargingLimit = () => {
-    const homeCurrentKwh = (homeCurrent / 100) * HOME_CAPACITY;
-    const teslaCurrentKwh = (teslaCurrent / 100) * TESLA_CAPACITY;
-    const minHomeKwh = (minHomeCharge / 100) * HOME_CAPACITY;
-    const availableEnergy = homeCurrentKwh - minHomeKwh;
-    const possibleChargeKwh = teslaCurrentKwh + availableEnergy;
-    const maxChargePercentage = (possibleChargeKwh / TESLA_CAPACITY) * 100;
-    return Math.min(100, Math.max(teslaCurrent, maxChargePercentage)).toFixed(1);
-  };
-
-  const teslaAvailableEnergy = ((100 - teslaCurrent) / 100 * TESLA_CAPACITY).toFixed(1);
-
-  return (
-    <Card className="w-full max-w-md mx-auto p-4">
-      <CardHeader>
-        <CardTitle className="text-xl text-center mb-4 flex items-center justify-center space-x-2">
-          <Battery className="w-6 h-6" />
-          <span>Calcolatore Limite Ricarica</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-8">
-        {/* Sezione Tesla */}
-        <div className="space-y-4 p-4 bg-red-50 rounded-lg">
-          <div className="flex items-center space-x-2 mb-2">
-            <Car className="w-5 h-5 text-red-600" />
-            <h3 className="font-semibold">Tesla ({TESLA_CAPACITY} kWh)</h3>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="flex-grow">Imposta Carica Attuale</Label>
-              <div className="flex items-center">
-                <Input
-                  type="number"
-                  value={teslaCurrent}
-                  onChange={handleTeslaTextInput}
-                  min={0}
-                  max={100}
-                  className="w-16"
-                />
-                <span className="ml-1">%</span>
-              </div>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Calcolatore Ricarica Tesla</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ricarica Tesla">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: white;
+            padding: 16px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        .title {
+            font-size: 1.25rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+        .box {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .box-tesla { background: #fee2e2; }
+        .box-home { background: #dbeafe; }
+        .box-result { background: #f3f4f6; }
+        .header {
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .input-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .input-label {
+            flex-grow: 1;
+        }
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+        }
+        input[type="number"] {
+            width: 64px;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+            text-align: right;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 1rem 0;
+        }
+        .info {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        .result {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #374151;
+        }
+        .result-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .percent {
+            margin-left: 4px;
+        }
+        /* Stile per slider Tesla */
+        .box-tesla input[type="range"] {
+            accent-color: #dc2626;
+        }
+        /* Stile per slider Casa */
+        .box-home input[type="range"] {
+            accent-color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Calcolatore Limite Ricarica</h1>
+        
+        <div class="box box-tesla">
+            <h3 class="header">Tesla (60 kWh)</h3>
+            <div class="input-group">
+                <label class="input-label">Imposta Carica Attuale</label>
+                <div class="input-wrapper">
+                    <input type="number" id="teslaInput" value="50" min="0" max="100"
+                        inputmode="numeric" pattern="[0-9]*" onfocus="this.select()">
+                    <span class="percent">%</span>
+                </div>
             </div>
-            <style jsx global>{`
-              .tesla-slider .relative {
-                background-color: rgb(254 202 202);
-              }
-              .tesla-slider [role="slider"] {
-                background-color: rgb(239 68 68);
-              }
-              .tesla-slider [role="slider"]:focus-visible {
-                outline-color: rgb(239 68 68);
-              }
-              .tesla-slider .range {
-                background-color: rgb(239 68 68) !important;
-              }
-              .home-slider .relative {
-                background-color: rgb(219 234 254);
-              }
-              .home-slider [role="slider"] {
-                background-color: rgb(37 99 235);
-              }
-              .home-slider [role="slider"]:focus-visible {
-                outline-color: rgb(37 99 235);
-              }
-              .home-slider .range {
-                background-color: rgb(37 99 235) !important;
-              }
-            `}</style>
-            <Slider
-              value={[teslaCurrent]}
-              onValueChange={(value) => setTeslaCurrent(value[0])}
-              min={0}
-              max={100}
-              step={1}
-              className="w-full tesla-slider"
-            />
-            <div className="text-sm text-gray-600">
-              Energia disponibile: {teslaAvailableEnergy} kWh
-            </div>
-          </div>
+            <input type="range" id="teslaSlider" value="50" min="0" max="100">
+            <div class="info" id="teslaEnergy">Energia disponibile: 30.0 kWh</div>
         </div>
-
-        {/* Sezione Casa */}
-        <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
-          <div className="flex items-center space-x-2 mb-2">
-            <Home className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold">Batteria Casa ({HOME_CAPACITY} kWh)</h3>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="flex-grow">Imposta Carica Attuale</Label>
-              <div className="flex items-center">
-                <Input
-                  type="number"
-                  value={homeCurrent}
-                  onChange={handleHomeTextInput}
-                  min={0}
-                  max={100}
-                  className="w-16"
-                />
-                <span className="ml-1">%</span>
-              </div>
+        
+        <div class="box box-home">
+            <h3 class="header">Batteria Casa (15 kWh)</h3>
+            <div class="input-group">
+                <label class="input-label">Imposta Carica Attuale</label>
+                <div class="input-wrapper">
+                    <input type="number" id="homeInput" value="50" min="0" max="100"
+                        inputmode="numeric" pattern="[0-9]*" onfocus="this.select()">
+                    <span class="percent">%</span>
+                </div>
             </div>
-            <Slider
-              value={[homeCurrent]}
-              onValueChange={(value) => setHomeCurrent(value[0])}
-              min={0}
-              max={100}
-              step={1}
-              className="w-full home-slider"
-            />
-            <div className="text-sm text-gray-600">
-              Energia disponibile: {((homeCurrent - minHomeCharge) / 100 * HOME_CAPACITY).toFixed(1)} kWh
+            <input type="range" id="homeSlider" value="50" min="0" max="100">
+            <div class="info" id="homeEnergy">Energia disponibile: 7.2 kWh</div>
+            
+            <div class="input-group" style="margin-top: 1rem;">
+                <label class="input-label">Livello Minimo Desiderato</label>
+                <div class="input-wrapper">
+                    <input type="number" id="minChargeInput" value="2" min="0" max="100"
+                        inputmode="numeric" pattern="[0-9]*" onfocus="this.select()">
+                    <span class="percent">%</span>
+                </div>
             </div>
-          </div>
-
-          <div className="space-y-2 mt-4">
-            <div className="flex items-center justify-between">
-              <Label className="flex-grow">Livello Minimo Desiderato</Label>
-              <div className="flex items-center">
-                <Input
-                  type="number"
-                  value={minHomeCharge}
-                  onChange={handleMinChargeInput}
-                  min={0}
-                  max={100}
-                  className="w-16"
-                />
-                <span className="ml-1">%</span>
-              </div>
-            </div>
-          </div>
         </div>
-
-        {/* Sezione Risultato */}
-        <div className="p-4 bg-gray-100 rounded-lg">
-          <p className="text-lg font-semibold text-gray-700">
-            Imposta Limite Ricarica Tesla: <span className="font-bold text-xl">{calculateChargingLimit()}%</span>
-          </p>
+        
+        <div class="box box-result">
+            <p class="result">
+                Imposta Limite Ricarica Tesla: 
+                <span class="result-value" id="result">50.0%</span>
+            </p>
         </div>
-      </CardContent>
-    </Card>
-  );
-};
-export default BatteryCalculator;
+    </div>
+
+    <script>
+        const TESLA_CAPACITY = 60;
+        const HOME_CAPACITY = 15;
+        
+        // Elementi DOM
+        const teslaInput = document.getElementById('teslaInput');
+        const teslaSlider = document.getElementById('teslaSlider');
+        const teslaEnergy = document.getElementById('teslaEnergy');
+        const homeInput = document.getElementById('homeInput');
+        const homeSlider = document.getElementById('homeSlider');
+        const homeEnergy = document.getElementById('homeEnergy');
+        const minChargeInput = document.getElementById('minChargeInput');
+        const resultSpan = document.getElementById('result');
+
+        function validatePercentage(value) {
+            const num = parseFloat(value);
+            if (isNaN(num)) return 0;
+            return Math.min(100, Math.max(0, num));
+        }
+
+        function calculateChargingLimit() {
+            const homeCurrent = parseFloat(homeInput.value);
+            const teslaCurrent = parseFloat(teslaInput.value);
+            const minCharge = parseFloat(minChargeInput.value);
+            
+            const homeCurrentKwh = (homeCurrent / 100) * HOME_CAPACITY;
+            const teslaCurrentKwh = (teslaCurrent / 100) * TESLA_CAPACITY;
+            const minHomeKwh = (minCharge / 100) * HOME_CAPACITY;
+            const availableEnergy = homeCurrentKwh - minHomeKwh;
+            const possibleChargeKwh = teslaCurrentKwh + availableEnergy;
+            const maxChargePercentage = (possibleChargeKwh / TESLA_CAPACITY) * 100;
+            
+            return Math.min(100, Math.max(teslaCurrent, maxChargePercentage)).toFixed(1);
+        }
+
+        function updateTeslaEnergy() {
+            const current = parseFloat(teslaInput.value);
+            const available = ((100 - current) / 100 * TESLA_CAPACITY).toFixed(1);
+            teslaEnergy.textContent = `Energia disponibile: ${available} kWh`;
+        }
+
+        function updateHomeEnergy() {
+            const current = parseFloat(homeInput.value);
+            const minCharge = parseFloat(minChargeInput.value);
+            const available = ((current - minCharge) / 100 * HOME_CAPACITY).toFixed(1);
+            homeEnergy.textContent = `Energia disponibile: ${available} kWh`;
+        }
+
+        function updateAll() {
+            resultSpan.textContent = calculateChargingLimit() + '%';
+            updateTeslaEnergy();
+            updateHomeEnergy();
+        }
+
+        // Event listeners per Tesla
+        teslaInput.addEventListener('input', (e) => {
+            const value = validatePercentage(e.target.value);
+            teslaInput.value = value;
+            teslaSlider.value = value;
+            updateAll();
+        });
+
+        teslaSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            teslaInput.value = value;
+            updateAll();
+        });
+
+        // Event listeners per Home
+        homeInput.addEventListener('input', (e) => {
+            const value = validatePercentage(e.target.value);
+            homeInput.value = value;
+            homeSlider.value = value;
+            updateAll();
+        });
+
+        homeSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            homeInput.value = value;
+            updateAll();
+        });
+
+        // Event listener per Minimo
+        minChargeInput.addEventListener('input', (e) => {
+            const value = validatePercentage(e.target.value);
+            minChargeInput.value = value;
+            updateAll();
+        });
+
+        // Inizializzazione
+        updateAll();
+    </script>
+</body>
+</html>
